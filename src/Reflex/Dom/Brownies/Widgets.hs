@@ -13,17 +13,26 @@ import Data.Word8
 import ByteString.StrictBuilder
 import Data.Monoid
 
--- import Reflex.Dom.AnimationFrame (animationFrame)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Unsafe as BS (unsafeUseAsCString)
 import qualified Data.Map as M (Map, empty)
 import qualified Data.Text as T
 
-
 -- --------------------------------------------------------------------------
 -- Canvas 
 -- --------------------------------------------------------------------------
-
+--
+-- Inspired by the library https://github.com/MaiaVictor/ReflexScreenWidget
+--          (still a lot of code originates from MaiaVictor!)
+--
+-- Main difference: The library of MaiaVictor always recreates the image.
+--                  This library recreates the image only if an Event occurs.
+--
+-- TODO:
+--   widht and heigth should be stored in the canvas not the image
+--   add event handling fo mouse events
+--   make canvas an own type (ev newtype)
+--
 -- | The image format used to render to the canvas. Each byte of the buffer
 -- represents a color channel from 0~255, in the following format:
 -- [0xRR,0xGG,0xBB,0xAA, 0xRR,0xGG,0xBB,0xAA...]. The length of the ByteString
@@ -34,8 +43,6 @@ data ByteImageRgba = ByteImageRgba {
     _width  :: Int,
     _height :: Int,
     _buffer :: BS.ByteString}
-
-
 
 -- | A Pixel representation with red green blue and alpha channel
 data PixelRGBA = PixelRGBA Word8 Word8 Word8 Word8
@@ -53,7 +60,7 @@ createImage width height pxf = ByteImageRgba width height $ imageBS width height
     imageBS w h f = builderBytes $ foldMap (renderPixel . f) $ indexArray w h
 
 -- | Renders a dynamic ByteImageData using a Canvas. The canvas is refreshed
---   at every animation frame of the browser. Returns the canvas.
+--   at every event. Returns the canvas.
 screenWidgetAttr :: MonadWidget t m => M.Map T.Text T.Text -> Behavior t ByteImageRgba -> Event t a -> m (El t)
 screenWidgetAttr attrs imageBehavior event = do
 
@@ -69,13 +76,8 @@ screenWidgetAttr attrs imageBehavior event = do
             BS.unsafeUseAsCString pixelByteString $ \ ptr ->
                 blitByteString canvasJS (pToJSVal width) (pToJSVal height) ptr
 
-    -- Redraws the canvas whenever the window is ready to render a frame.
-    -- animator <- animationFrame
-    -- performEvent_ $ liftIO . draw <$> tag imageBehavior animator
-
     -- Draw the canvas, when an draw event occurs
     performEvent_ $ liftIO . draw <$> tag imageBehavior event
-
     return canvasEl
 
 -- | Same as above, without the Attr argument.
