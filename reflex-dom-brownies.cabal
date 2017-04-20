@@ -19,7 +19,7 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Reflex.Dom.Brownies  
   other-modules:       Reflex.Dom.Brownies.LowLevel
-                       Reflex.Dom.Brownies.Widgets
+                       Reflex.Dom.Brownies.PixelCanvas
   -- other-extensions:    
   build-depends:       base >=4.8 && <4.10
                        , bytestring
