@@ -48,6 +48,16 @@ data ByteImageRgba = ByteImageRgba {
 data PixelRGBA = PixelRGBA Word8 Word8 Word8 Word8
   deriving (Show, Eq)
 
+-- | Create an image with a pixel function
+createImage :: Int -> Int -> ((Int, Int) -> PixelRGBA) -> ByteImageRgba
+createImage width height pxf = ByteImageRgba width height $ imageBS width height pxf
+  where
+    indexArray :: Int -> Int -> [(Int, Int)]
+    indexArray w h = [(r, c) | r <- [h -1, h - 2..0], c <- [w -1, w -2..0] ]
+    renderPixel :: PixelRGBA -> Builder
+    renderPixel (PixelRGBA r g b a) = word8 r <> word8 g <> word8 b <> word8 a
+    imageBS :: Int -> Int -> ((Int, Int) -> PixelRGBA) -> BS.ByteString
+    imageBS w h f = builderBytes $ foldMap (renderPixel . f) $ indexArray w h
 
 -- | Renders a dynamic ByteImageData using a Canvas. The canvas is refreshed
 --   at every event. Returns the canvas.
