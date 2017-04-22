@@ -20,6 +20,7 @@ library
   exposed-modules:     Reflex.Dom.Brownies  
   other-modules:       Reflex.Dom.Brownies.LowLevel
                        Reflex.Dom.Brownies.PixelCanvas
+                       Reflex.Dom.Brownies.Alert
   -- other-extensions:    
   build-depends:       base >=4.8 && <4.10
                        , bytestring

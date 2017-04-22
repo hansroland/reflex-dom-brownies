@@ -3,7 +3,8 @@
 
 import Reflex.Dom.Brownies
 import GHCJS.DOM.EventM (mouseOffsetXY)
-import qualified Data.Text as T 
+import qualified Data.Text as T
+import Data.Monoid ((<>))
 
 main :: IO ()
 main = mainWidget $ do
@@ -12,8 +13,10 @@ main = mainWidget $ do
   evRed <- button "Red"
   evGreen <- button "Green"
   el "br" blank
-  let evImg = leftmost [greenImage <$ evPostBuild, redImage <$ evRed, greenImage <$ evGreen]
-  canvas <- pixelCanvas evImg
+  let evImg = leftmost [greenPixels <$ evPostBuild, redPixels <$ evRed, greenPixels <$ evGreen]
+  let attr = "width" =: "512" <> "height" =: "255"
+
+  canvas <- pixelCanvasAttr attr evImg
   return ()
   
   {-
@@ -31,15 +34,9 @@ main = mainWidget $ do
 
 -- Pure user user functions ------------------------------------------------------------------------------
 
-redImage :: ByteImageRgba
-redImage = createImage 512 256 redPixels
-
-greenImage :: ByteImageRgba
-greenImage = createImage 512 256 greenPixels
-
 -- Function applied to every index pair
-redPixels :: (Int, Int) -> PixelRGBA
-redPixels (x,_) = PixelRGBA (fromIntegral x) 0 0 255
+redPixels :: Int -> Int -> Int -> Int -> PixelRGBA
+redPixels _ _ x _ = PixelRGBA (fromIntegral x) 0 0 255
 
-greenPixels :: (Int, Int) -> PixelRGBA
-greenPixels (x,_) = PixelRGBA 0 (fromIntegral x) 0 255
+greenPixels ::Int -> Int -> Int -> Int -> PixelRGBA
+greenPixels _ _ x _  = PixelRGBA 0 (fromIntegral x) 0 255
