@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, NoMonomorphismRestriction, JavaScriptFFI, CPP #-}
 
 module Reflex.Dom.Brownies.LowLevel (
-    blitByteString
+    js_putImageData
     , js_alert 
     ) where
 --
@@ -37,6 +37,6 @@ foreign import javascript unsafe
         ctx.putImageData(new ImageData(pixels, width, height), 0, 0); \
     })()"
     -- | Draw a Haskell ByteString to a JavaScript Canvas
-    blitByteString :: forall a . JSVal -> JSVal -> JSVal -> Ptr a -> IO ()
+    js_putImageData :: forall a . JSVal -> JSVal -> JSVal -> Ptr a -> IO ()
 
 #endif

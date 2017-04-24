@@ -10,7 +10,7 @@ module Reflex.Dom.Brownies.PixelCanvas (
 where 
 
 import Control.Monad.IO.Class (liftIO)
-import           Reflex.Dom.Brownies.LowLevel (blitByteString)
+import           Reflex.Dom.Brownies.LowLevel (js_putImageData)
 import           Reflex.Dom.Brownies.Alert(alertEvent)
 import           GHCJS.DOM.Types (unElement, toElement, HTMLCanvasElement, castToHTMLCanvasElement)
 import           GHCJS.DOM.HTMLCanvasElement(getWidth, getHeight)
@@ -80,7 +80,7 @@ pixelCanvasAttr attrs evPixFun = do
     let draw :: Int -> Int -> BS.ByteString -> IO ()
         draw width height pixelByteString =
             BS.unsafeUseAsCString pixelByteString $ \ ptr ->
-                blitByteString canvasJS (pToJSVal width) (pToJSVal height) ptr
+                js_putImageData canvasJS (pToJSVal width) (pToJSVal height) ptr
     -- Draw the canvas, when an draw event occurs
     performEvent_ $ liftIO . draw width height <$> evBS
     return canvasEl
