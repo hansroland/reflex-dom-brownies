@@ -1,20 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Reflex.Dom.Brownies.PixelCanvas (
     PixelRGBA8(..)
+    , ICoord
     , PixelFunction
     , pixelCanvasAttr 
     )
-
 where 
 
-import Control.Monad.IO.Class (liftIO)
+import           Control.Monad.IO.Class (liftIO)
 import           Reflex.Dom.Brownies.LowLevel (js_putImageData)
-import           Reflex.Dom.Brownies.Alert(alertEvent)
 import           GHCJS.DOM.Types (unElement, toElement, HTMLCanvasElement, castToHTMLCanvasElement)
 import           GHCJS.DOM.HTMLCanvasElement(getWidth, getHeight)
-
 import           GHCJS.Marshal.Pure (pToJSVal)
 import           Reflex.Dom
 import           Data.Word8
@@ -30,7 +27,7 @@ import qualified Data.Text as T
 -- --------------------------------------------------------------------------
 --
 -- Inspired by the library https://github.com/MaiaVictor/ReflexScreenWidget
---          (still a lot of code originates from MaiaVictor!)
+--          (Code to write to canvas originates from MaiaVictor!)
 --
 -- Main difference: The library of MaiaVictor always recreates the image.
 --                  This library recreates the image only if an Event occurs.
@@ -44,12 +41,12 @@ import qualified Data.Text as T
 data PixelRGBA8 = PixelRGBA8 Word8 Word8 Word8 Word8
   deriving (Show, Eq)
 
+-- | A type synonym for pixel coordinates
+type ICoord = (Int, Int)
+
 -- | A function that computes Pixels
--- 
-type PixelFunction = Int   -- ^ width = Total number of pixels in x-direction (xNum)
-  -> Int                   -- ^ height = Total number of pixels in y-direction (yNum)
-  -> Int                   -- ^ current pixel - offset in x-direction   (0 <= x < xNum) 
-  -> Int                   -- ^ current pixel - offset in y-direction   (0 <= y < yNum)
+type PixelFunction = ICoord   -- ^ size of pixel image)
+  -> ICoord                   -- ^ coordinates of current pixel
   -> PixelRGBA8
 
 -- | Renders a dynamic ByteImageData using a Canvas. The canvas is refreshed
@@ -59,18 +56,11 @@ pixelCanvasAttr attrs evPixFun = do
     -- Creates the canvas element on which we will render
     (canvasEl, _) <- elAttr' "canvas" attrs (text "")
     -- Gets the proper GHCJS's JSVal of the canvas
-    let canvasJS = unElement.toElement._element_raw $ canvasEl
-
-
     let canvasElement = castToHTMLCanvasElement (_element_raw canvasEl)
     width <- getWidth canvasElement
     height <- getHeight canvasElement
-
-    -- let evAlert = width <$ evImg
-    -- alertEvent (\n -> "width: " ++ show n) evAlert
-
     let evBS = pixelByteString width height <$> evPixFun
-
+    let canvasJS = unElement.toElement._element_raw $ canvasEl
     -- IO action that will draw our pixels to the canvas 
     -- Each byte of the buffer represents a color channel from 0~255, in the following format:
     -- [0xRR,0xGG,0xBB,0xAA, 0xRR,0xGG,0xBB,0xAA...]. The length of the ByteString
@@ -90,7 +80,6 @@ pixelByteString :: Int -> Int -> PixelFunction -> BS.ByteString
 pixelByteString width height pxf = builderBytes $ foldMap renderPixel $ pixelList width height
   where
     pixelList :: Int -> Int -> [PixelRGBA8]
-    pixelList w h = [pxf w h r c | r <- [h -1, h - 2..0], c <- [w -1, w -2..0] ]
+    pixelList w h = [pxf (w, h) (r, c) | r <- [h -1, h - 2..0], c <- [w -1, w -2..0] ]
     renderPixel :: PixelRGBA8 -> Builder
     renderPixel (PixelRGBA8 r g b a) = word8 r <> word8 g <> word8 b <> word8 a
-
