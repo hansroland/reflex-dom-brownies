@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Reflex.Dom.Brownies.PixelCanvas (
-    PixelRGBA(..)
+    PixelRGBA8(..)
     , PixelFunction
     , pixelCanvasAttr 
     )
@@ -41,7 +41,7 @@ import qualified Data.Text as T
 --
 
 -- | A Pixel representation with red green blue and alpha channel
-data PixelRGBA = PixelRGBA Word8 Word8 Word8 Word8
+data PixelRGBA8 = PixelRGBA8 Word8 Word8 Word8 Word8
   deriving (Show, Eq)
 
 -- | A function that computes Pixels
@@ -50,7 +50,7 @@ type PixelFunction = Int   -- ^ width = Total number of pixels in x-direction (x
   -> Int                   -- ^ height = Total number of pixels in y-direction (yNum)
   -> Int                   -- ^ current pixel - offset in x-direction   (0 <= x < xNum) 
   -> Int                   -- ^ current pixel - offset in y-direction   (0 <= y < yNum)
-  -> PixelRGBA
+  -> PixelRGBA8
 
 -- | Renders a dynamic ByteImageData using a Canvas. The canvas is refreshed
 --   at every event. Returns the canvas.
@@ -89,8 +89,8 @@ pixelCanvasAttr attrs evPixFun = do
 pixelByteString :: Int -> Int -> PixelFunction -> BS.ByteString
 pixelByteString width height pxf = builderBytes $ foldMap renderPixel $ pixelList width height
   where
-    pixelList :: Int -> Int -> [PixelRGBA]
+    pixelList :: Int -> Int -> [PixelRGBA8]
     pixelList w h = [pxf w h r c | r <- [h -1, h - 2..0], c <- [w -1, w -2..0] ]
-    renderPixel :: PixelRGBA -> Builder
-    renderPixel (PixelRGBA r g b a) = word8 r <> word8 g <> word8 b <> word8 a
+    renderPixel :: PixelRGBA8 -> Builder
+    renderPixel (PixelRGBA8 r g b a) = word8 r <> word8 g <> word8 b <> word8 a
 

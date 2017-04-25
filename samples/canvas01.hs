@@ -35,8 +35,8 @@ main = mainWidget $ do
 -- Pure user user functions ------------------------------------------------------------------------------
 
 -- Function applied to every index pair
-redPixels :: Int -> Int -> Int -> Int -> PixelRGBA
-redPixels _ _ x _ = PixelRGBA (fromIntegral x) 0 0 255
+redPixels :: Int -> Int -> Int -> Int -> PixelRGBA8
+redPixels _ _ x _ = PixelRGBA8 (fromIntegral x) 0 0 255
 
-greenPixels ::Int -> Int -> Int -> Int -> PixelRGBA
-greenPixels _ _ x _  = PixelRGBA 0 (fromIntegral x) 0 255
+greenPixels ::Int -> Int -> Int -> Int -> PixelRGBA8
+greenPixels _ _ x _  = PixelRGBA8 0 (fromIntegral x) 0 255
