@@ -14,8 +14,7 @@ main = mainWidget $ do
   evGreen <- button "Green"
   el "br" blank
   let evImg = leftmost [greenPixels <$ evPostBuild, redPixels <$ evRed, greenPixels <$ evGreen]
-  let attr = "width" =: "512" <> "height" =: "255"
-
+  let attr = "width" =: "256" <> "height" =: "256"
   canvas <- pixelCanvasAttr attr evImg
   return ()
   
@@ -36,7 +35,7 @@ main = mainWidget $ do
 
 -- Function applied to every index pair
 redPixels :: ICoord -> ICoord -> PixelRGBA8
-redPixels _  px = PixelRGBA8 (fromIntegral $ fst px) 0 0 255
+redPixels _  px = PixelRGBA8 (fromIntegral $ snd px) 0 0 255
 
 greenPixels :: ICoord -> ICoord -> PixelRGBA8
 greenPixels _ px  = PixelRGBA8 0 (fromIntegral $ fst px) 0 255

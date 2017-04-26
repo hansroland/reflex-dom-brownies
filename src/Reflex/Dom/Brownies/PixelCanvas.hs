@@ -49,8 +49,8 @@ type PixelFunction = ICoord   -- ^ size of pixel image)
   -> ICoord                   -- ^ coordinates of current pixel
   -> PixelRGBA8
 
--- | Renders a dynamic ByteImageData using a Canvas. The canvas is refreshed
---   at every event. Returns the canvas.
+-- | Renders a Canvas using a PixelFunction. 
+--   The canvas is refreshed at every event. Returns the canvas.
 pixelCanvasAttr :: MonadWidget t m => M.Map T.Text T.Text -> Event t PixelFunction -> m (El t)
 pixelCanvasAttr attrs evPixFun = do
     -- Creates the canvas element on which we will render
@@ -65,8 +65,7 @@ pixelCanvasAttr attrs evPixFun = do
     -- Each byte of the buffer represents a color channel from 0~255, in the following format:
     -- [0xRR,0xGG,0xBB,0xAA, 0xRR,0xGG,0xBB,0xAA...]. The length of the ByteString
     -- must, thus, be equal to `width * height * 4`. This unsafely casts the
-    -- ByteString to a C Ptr that will be used directly on the JS blitting
-    -- function.
+    -- ByteString to a C Ptr that will be used directly on the JS putImageData function.
     let draw :: Int -> Int -> BS.ByteString -> IO ()
         draw width height pixelByteString =
             BS.unsafeUseAsCString pixelByteString $ \ ptr ->
@@ -80,6 +79,6 @@ pixelByteString :: Int -> Int -> PixelFunction -> BS.ByteString
 pixelByteString width height pxf = builderBytes $ foldMap renderPixel $ pixelList width height
   where
     pixelList :: Int -> Int -> [PixelRGBA8]
-    pixelList w h = [pxf (w, h) (r, c) | r <- [h -1, h - 2..0], c <- [w -1, w -2..0] ]
+    pixelList w h = [pxf (w, h) (c, r) | r <- [0..h - 1], c <- [0..w - 1] ] --hier
     renderPixel :: PixelRGBA8 -> Builder
     renderPixel (PixelRGBA8 r g b a) = word8 r <> word8 g <> word8 b <> word8 a
