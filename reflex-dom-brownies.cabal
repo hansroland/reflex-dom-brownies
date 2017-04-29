@@ -21,16 +21,18 @@ library
   other-modules:       Reflex.Dom.Brownies.LowLevel
                        Reflex.Dom.Brownies.PixelCanvas
                        Reflex.Dom.Brownies.Alert
-  -- other-extensions:    
+  -- other-extensions:
+  hs-source-dirs:      src
+  default-language:    Haskell2010    
   build-depends:       base >=4.8 && <4.10
                        , bytestring
                        , bytestring-strict-builder
                        , containers
-                       , ghcjs-base
                        , ghcjs-dom
                        , reflex-dom
                        , text
                        , transformers
                        , word8
-  hs-source-dirs:      src
-  default-language:    Haskell2010
+  if impl(ghcjs)
+    build-depends:
+      ghcjs-base
