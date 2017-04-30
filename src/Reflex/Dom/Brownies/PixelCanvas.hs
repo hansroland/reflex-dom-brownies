@@ -9,16 +9,15 @@ module Reflex.Dom.Brownies.PixelCanvas (
 where 
 
 import           Control.Monad.IO.Class (liftIO)
-import           Reflex.Dom.Brownies.LowLevel (js_putImageData)
+import           Reflex.Dom.Brownies.LowLevel (putImageData, draw)
 import           GHCJS.DOM.Types (unElement, toElement, HTMLCanvasElement, castToHTMLCanvasElement)
 import           GHCJS.DOM.HTMLCanvasElement(getWidth, getHeight)
-import           GHCJS.Marshal.Pure (pToJSVal)
 import           Reflex.Dom
 import           Data.Word8
 import           ByteString.StrictBuilder
 import           Data.Monoid
 import qualified Data.ByteString as BS (ByteString)
-import qualified Data.ByteString.Unsafe as BS (unsafeUseAsCString)
+-- import qualified Data.ByteString.Unsafe as BS (unsafeUseAsCString)
 import qualified Data.Map as M (Map, empty)
 import qualified Data.Text as T
 
@@ -60,18 +59,15 @@ pixelCanvasAttr attrs evPixFun = do
     width <- getWidth canvasElement
     height <- getHeight canvasElement
     let evBS = pixelByteString width height <$> evPixFun
-    let canvasJS = unElement.toElement._element_raw $ canvasEl
+    -- let canvasJS = unElement.toElement._element_raw $ canvasEl
     -- IO action that will draw our pixels to the canvas 
     -- Each byte of the buffer represents a color channel from 0~255, in the following format:
     -- [0xRR,0xGG,0xBB,0xAA, 0xRR,0xGG,0xBB,0xAA...]. The length of the ByteString
     -- must, thus, be equal to `width * height * 4`. This unsafely casts the
     -- ByteString to a C Ptr that will be used directly on the JS putImageData function.
-    let draw :: Int -> Int -> BS.ByteString -> IO ()
-        draw width height pixelByteString =
-            BS.unsafeUseAsCString pixelByteString $ \ ptr ->
-                js_putImageData canvasJS (pToJSVal width) (pToJSVal height) ptr
+
     -- Draw the canvas, when an draw event occurs
-    performEvent_ $ liftIO . draw width height <$> evBS
+    performEvent_ $ liftIO . draw canvasEl width height <$> evBS
     return canvasEl
 
 -- Create an image with a pixel function
