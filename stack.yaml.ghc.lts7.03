@@ -1,0 +1,34 @@
+# stack yaml starter file for reflex projects with ghc
+# See: https://github.com/commercialhaskell/stack/blob/master/doc/ghcjs.md
+
+resolver: lts-7.3
+
+flags: {}
+extra-package-dbs: []
+packages:
+- '.'
+- location:
+    git: https://github.com/ghcjs/ghcjs-base.git
+    commit: dd7034ef8582ea8a175a71a988393a9d1ee86d6f
+  extra-dep: true
+
+- location:
+    git: https://github.com/reflex-frp/reflex
+    commit: 46304b448b4646b0d74e7b17c69a6d4ce21e5d25
+  extra-dep: true
+
+- location:
+    git: https://github.com/reflex-frp/reflex-dom
+    commit: 773de9be7749b6a5bb55966d1a2632782d9bcde7
+  extra-dep: true
+
+extra-deps:
+- bytestring-strict-builder-0.4.5
+- ghcjs-dom-0.2.4.0
+- prim-uniq-0.1.0.1
+- ref-tf-0.4.0.1
+- zenc-0.1.1
+- dlist-0.7.1.2
+- base-prelude-1.2.0.1
+- dependent-map-0.2.4.0
+- webkitgtk3-javascriptcore-0.13.2.0
