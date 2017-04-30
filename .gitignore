@@ -1,0 +1,2 @@
+# Do not deliver default stack - user has to choose
+stack.yaml
