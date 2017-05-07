@@ -26,13 +26,30 @@ library
   default-language:    Haskell2010    
   build-depends:       base >=4.8 && <4.10
                        , bytestring
-                       , bytestring-strict-builder
+                       -- , bytestring-strict-builder
                        , containers
                        , ghcjs-dom
-                       , reflex-dom
+                       , reflex-dom-core
                        , text
                        , transformers
                        , word8
+                       -- needed for lts-7.19
+                       , base64-bytestring
+                       , data-default-class
+                       , blaze-builder
+                       , data-default-instances-containers
+                       , dependent-sum
+                       , exceptions
+                       , keycode
+                       , polyparse
+                       , random
+                       , old-time
+                       , data-default-instances-old-locale
+                       , reflection
+                       , tf-random
+                       , semigroups
+                       , haskell-src-exts
+
   if impl(ghcjs)
     build-depends:
       ghcjs-base
