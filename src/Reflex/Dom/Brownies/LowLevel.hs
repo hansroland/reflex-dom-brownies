@@ -12,13 +12,30 @@ import           GHCJS.DOM.Types (unElement, toElement, HTMLCanvasElement, castT
 
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Unsafe as BS (unsafeUseAsCString)
+import Control.Monad.IO.Class (liftIO)
+
 
 #ifdef __GHCJS__
 import GHCJS.DOM.Types (toJSString)
 import GHCJS.Types (JSVal, JSString)
 import Foreign.Ptr (Ptr)
 import GHCJS.Marshal.Pure (pFromJSVal, pToJSVal)
-import Control.Monad.IO.Class (liftIO)
+#else
+
+
+import Graphics.UI.Gtk.WebKit.JavaScriptCore.JSBase(JSContextRef, jsevaluatescript)
+import Graphics.UI.Gtk.WebKit.JavaScriptCore.JSStringRef(jsstringcreatewithutf8cstring)
+import Graphics.UI.Gtk.WebKit.JavaScriptCore.WebFrame(webFrameGetGlobalContext)
+-- import Graphics.UI.Gtk.WebKit.JavaScriptCore.JSObjectRef
+import Graphics.UI.Gtk.WebKit.WebView(WebView, webViewGetMainFrame)
+import Foreign.Ptr(nullPtr)
+import Foreign.JavaScript.TH(unWebViewSingleton, askWebView)
+import Reflex.Dom.Class
+
+
+
+import Graphics.UI.Gtk.WebKit.DOM.HTMLCanvasElement(toHTMLCanvasElement)
+
 #endif
 
 -- ----------------------------------------------------------------------------------
@@ -39,7 +56,21 @@ foreign import javascript unsafe
   js_alert :: JSString -> IO ()
 
 #else
-alertEvent = error "js_alert can only be used with GHCJS"
+alertEvent eventValueToStr e = do
+    wv <- fmap unWebViewSingleton askWebView             --  alert :: (MonadIO m) => String -> IO ()
+    let alert a = liftIO $ jsAlert wv $ eventValueToStr a
+    performEvent_ (alert <$> e)
+
+jsAlert :: WebView -> String -> IO ()
+jsAlert vw _ = withWebViewContext vw $ \c -> do
+   script <- jsstringcreatewithutf8cstring "alert"
+   -- args <- toJSObject c ["Hello I'm a static alert"]
+   jsevaluatescript c script nullPtr nullPtr 1 nullPtr  -- Parameter fehlt noch (nullPtr nach script)
+   return ()
+
+-- | Copied from Reflex.Dom.Internal.Foreign.hs
+withWebViewContext :: WebView -> (JSContextRef -> IO a) -> IO a
+withWebViewContext wv f = f =<< webFrameGetGlobalContext =<< webViewGetMainFrame wv
 #endif
 
 -- ----------------------------------------------------------------------------------
@@ -80,5 +111,10 @@ foreign import javascript unsafe
     js_putImageData :: forall a . JSVal -> JSVal -> JSVal -> Ptr a -> IO ()
 
 #else
+
+
 putImageData = error "putImageData can only be used with GHCJS"
+
+-- use fromIntegral to convert Ints
+-- use toHTMLCanvasElement :: HTMLCanvasElementClass o => o -> HTMLCanvasElement
 #endif

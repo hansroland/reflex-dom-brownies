@@ -33,6 +33,11 @@ library
                        , text
                        , transformers
                        , word8
+
   if impl(ghcjs)
     build-depends:
       ghcjs-base
+  else
+    build-depends:
+      webkitgtk3 == 0.14.*
+      , webkitgtk3-javascriptcore == 0.13.*
