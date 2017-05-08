@@ -17,7 +17,6 @@ import           Data.Word8
 import           ByteString.StrictBuilder
 import           Data.Monoid
 import qualified Data.ByteString as BS (ByteString)
--- import qualified Data.ByteString.Unsafe as BS (unsafeUseAsCString)
 import qualified Data.Map as M (Map, empty)
 import qualified Data.Text as T
 
@@ -78,11 +77,6 @@ pixelByteString :: Int -> Int -> PixelFunction -> BS.ByteString
 pixelByteString width height pxf = builderBytes $ foldMap renderPixel $ pixelList width height
   where
     pixelList :: Int -> Int -> [PixelRGBA8]
-    pixelList w h = [pxf (w, h) (c, r) | r <- [0..h - 1], c <- [0..w - 1] ] --hier
+    pixelList w h = [pxf (w, h) (c, r) | r <- [0..h - 1], c <- [0..w - 1] ]
     renderPixel :: PixelRGBA8 -> Builder
     renderPixel (PixelRGBA8 r g b a) = word8 r <> word8 g <> word8 b <> word8 a
-
-
-
--- castToHTMLCanvasElement :: IsGObject obj => obj -> HTMLCanvasElement
--- castToHTMLCanvasElement = castTo gTypeHTMLCanvasElement "HTMLCanvasElement"
