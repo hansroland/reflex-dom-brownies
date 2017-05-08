@@ -10,7 +10,7 @@ where
 
 import           Control.Monad.IO.Class (liftIO)
 import           Reflex.Dom.Brownies.LowLevel (putImageData, draw)
-import           GHCJS.DOM.Types (unElement, toElement, HTMLCanvasElement, castToHTMLCanvasElement)
+import           GHCJS.DOM.Types (unElement, toElement, toJSVal, HTMLCanvasElement(..))
 import           GHCJS.DOM.HTMLCanvasElement(getWidth, getHeight)
 import           Reflex.Dom
 import           Data.Word8
@@ -55,9 +55,12 @@ pixelCanvasAttr attrs evPixFun = do
     -- Creates the canvas element on which we will render
     (canvasEl, _) <- elAttr' "canvas" attrs (text "")
     -- Gets the proper GHCJS's JSVal of the canvas
-    let canvasElement = castToHTMLCanvasElement (_element_raw canvasEl)
-    width <- getWidth canvasElement
-    height <- getHeight canvasElement
+    el <- liftIO $ toJSVal (_element_raw canvasEl)
+    let canvasElement = HTMLCanvasElement el 
+    wWidth <- getWidth canvasElement
+    wHeight <- getHeight canvasElement
+    let width = fromIntegral wWidth
+    let height = fromIntegral wHeight
     let evBS = pixelByteString width height <$> evPixFun
     -- let canvasJS = unElement.toElement._element_raw $ canvasEl
     -- IO action that will draw our pixels to the canvas 
@@ -78,3 +81,8 @@ pixelByteString width height pxf = builderBytes $ foldMap renderPixel $ pixelLis
     pixelList w h = [pxf (w, h) (c, r) | r <- [0..h - 1], c <- [0..w - 1] ] --hier
     renderPixel :: PixelRGBA8 -> Builder
     renderPixel (PixelRGBA8 r g b a) = word8 r <> word8 g <> word8 b <> word8 a
+
+
+
+-- castToHTMLCanvasElement :: IsGObject obj => obj -> HTMLCanvasElement
+-- castToHTMLCanvasElement = castTo gTypeHTMLCanvasElement "HTMLCanvasElement"

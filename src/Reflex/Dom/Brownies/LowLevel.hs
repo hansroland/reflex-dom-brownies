@@ -8,7 +8,7 @@ module Reflex.Dom.Brownies.LowLevel (
     ) where
 
 import           Reflex.Dom
-import           GHCJS.DOM.Types (unElement, toElement, HTMLCanvasElement, castToHTMLCanvasElement)
+import           GHCJS.DOM.Types (unElement, toElement, HTMLCanvasElement)
 
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Unsafe as BS (unsafeUseAsCString)
