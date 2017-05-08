@@ -34,6 +34,10 @@ library
                        , transformers
                        , word8
 
+  ghc-options:
+    -O2
+    -Wall
+
   if impl(ghcjs)
     build-depends:
       ghcjs-base
