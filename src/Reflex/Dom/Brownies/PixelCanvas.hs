@@ -14,9 +14,14 @@ import           GHCJS.DOM.Types (toJSVal, HTMLCanvasElement(..))
 import           GHCJS.DOM.HTMLCanvasElement(getWidth, getHeight)
 import           Reflex.Dom
 import           Data.Word8
-import qualified Data.ByteString as BS (ByteString, unfoldrN)
+import qualified Data.ByteString as BS (ByteString, empty)
+import qualified Data.ByteString.Internal as BSI
 import qualified Data.Map as M (Map)
 import qualified Data.Text as T
+
+import           Foreign.Ptr (plusPtr)
+import           System.IO.Unsafe (unsafePerformIO)
+import           Foreign.Storable (poke, pokeByteOff)
 
 -- --------------------------------------------------------------------------
 -- Canvas 
@@ -36,18 +41,6 @@ import qualified Data.Text as T
 -- | A Pixel representation with red green blue and alpha channel
 data PixelRGBA8 = PixelRGBA8 !Word8 !Word8 !Word8 !Word8
   deriving (Show, Eq)
-
-compRed :: PixelRGBA8 -> Word8
-compRed (PixelRGBA8 r _ _ _ ) = r
-
-compGreen :: PixelRGBA8 -> Word8
-compGreen (PixelRGBA8 _ g _ _ ) = g
-
-compBlue :: PixelRGBA8 -> Word8
-compBlue (PixelRGBA8 _ _ b _ ) = b
-
-compAlpha :: PixelRGBA8 -> Word8
-compAlpha (PixelRGBA8 _ _ _ a ) = a
 
 -- | A function that computes Pixels
 type PixelFunction = Int -> Int   -- ^ size of pixel image)
@@ -78,25 +71,38 @@ pixelCanvasAttr attrs evPixFun = do
     performEvent_ $ liftIO . draw canvasEl width height <$> evBS
     return canvasEl
 
--- Create an image with a pixel function
+-- | Generate RGBA-ByteString for our image
 pixelByteString :: Int -> Int -> PixelFunction -> BS.ByteString
-pixelByteString width height pxf = fst $ BS.unfoldrN (width * height * 4) (step pxf width height) start
-  where 
-    start = (0, 0, pxf width height 0 0, 0)
+pixelByteString width height pxf = fst $ unfoldrX (width * height) (step pxf width height) (0, 0)
 
-type Loc = (Int, Int, PixelRGBA8, Int)
+type Loc = (Int, Int)
 
--- | Helper function for unfoldrN
-step :: PixelFunction -> Int -> Int -> Loc -> Maybe (Word8, Loc)
-step pxf w h (r, c, rgb, i)
-    | i == 1    = Just (compGreen rgb,  (r, c, rgb, i + 1))
-    | i == 2    = Just (compBlue  rgb,  (r, c, rgb, i + 1))
-    | i == 3    = Just (compAlpha rgb,  (r, c, rgb, i + 1))
-    | i == 0    = Just (compRed   rgb,  (r, c, rgb, i + 1))
-    | c < w -1  = Just (compRed   rgbc, (r, nextc, rgbc, 1))
-    | otherwise = Just (compRed   rgbr, (nextr, 0, rgbr, 1))
+-- | Low level function to create a ByteString.
+--   Similar to BS.unfoldrN but specialiced to PixelRGBA: 
+--   For every Pixel we store 4 bytes to the ByteString
+unfoldrX :: Int ->                           -- ^ Number of Pixels
+         (a -> (PixelRGBA8, a))              -- ^ Stepping function
+         -> a                                -- ^ Start argument for stepping function
+         -> (BS.ByteString, a)
+unfoldrX ip pxf x0
+    | nb < 0    = (BS.empty, x0)             -- nb = number of bytes; np = number of pixels
+    | otherwise = unsafePerformIO $ BSI.createAndTrim' nb $ \p -> go p x0 0
   where 
-    nextc = c + 1
-    nextr = r + 1
-    rgbc = pxf w h r nextc
-    rgbr = pxf w h nextr 0
+    nb = 4 * ip
+    go !p !x !n
+        | n == nb    = return (0, n, x)
+        | otherwise = do poke p rr
+                         pokeByteOff p 1 gg
+                         pokeByteOff p 2 bb
+                         pokeByteOff p 3 aa
+                         go (p `plusPtr` 4) x' (n+4)
+      where (PixelRGBA8 rr gg bb aa, x') = pxf x
+
+-- | Stepping function for unfoldrX
+-- It steps through the index space of the image and calls for every index the pixel function
+step :: PixelFunction -> Int -> Int -> Loc -> (PixelRGBA8, Loc)
+step pxf w h (r, c)
+    | c < w -1  = (rgba, (r, c + 1))                -- step through one row
+    | otherwise = (rgba, (r + 1, 0))                -- step through all rows
+  where 
+    rgba = pxf w h r c
