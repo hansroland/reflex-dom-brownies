@@ -14,9 +14,7 @@ import           GHCJS.DOM.Types (toJSVal, HTMLCanvasElement(..))
 import           GHCJS.DOM.HTMLCanvasElement(getWidth, getHeight)
 import           Reflex.Dom
 import           Data.Word8
-import           ByteString.StrictBuilder
-import           Data.Monoid
-import qualified Data.ByteString as BS (ByteString)
+import qualified Data.ByteString as BS (ByteString, unfoldrN)
 import qualified Data.Map as M (Map)
 import qualified Data.Text as T
 
@@ -39,8 +37,17 @@ import qualified Data.Text as T
 data PixelRGBA8 = PixelRGBA8 !Word8 !Word8 !Word8 !Word8
   deriving (Show, Eq)
 
--- -- | A type synonym for pixel coordinates
--- type ICoord = (Int, Int)
+compRed :: PixelRGBA8 -> Word8
+compRed (PixelRGBA8 r _ _ _ ) = r
+
+compGreen :: PixelRGBA8 -> Word8
+compGreen (PixelRGBA8 _ g _ _ ) = g
+
+compBlue :: PixelRGBA8 -> Word8
+compBlue (PixelRGBA8 _ _ b _ ) = b
+
+compAlpha :: PixelRGBA8 -> Word8
+compAlpha (PixelRGBA8 _ _ _ a ) = a
 
 -- | A function that computes Pixels
 type PixelFunction = Int -> Int   -- ^ size of pixel image)
@@ -73,9 +80,23 @@ pixelCanvasAttr attrs evPixFun = do
 
 -- Create an image with a pixel function
 pixelByteString :: Int -> Int -> PixelFunction -> BS.ByteString
-pixelByteString width height pxf = builderBytes $ foldMap renderPixel $ pixelList width height
-  where
-    pixelList :: Int -> Int -> [PixelRGBA8]
-    pixelList w h = [pxf w h c r | r <- [0..h - 1], c <- [0..w - 1] ]
-    renderPixel :: PixelRGBA8 -> Builder
-    renderPixel (PixelRGBA8 r g b a) = word8 r <> word8 g <> word8 b <> word8 a
+pixelByteString width height pxf = fst $ BS.unfoldrN (width * height * 4) (step pxf width height) start
+  where 
+    start = (0, 0, pxf width height 0 0, 0)
+
+type Loc = (Int, Int, PixelRGBA8, Int)
+
+-- | Helper function for unfoldrN
+step :: PixelFunction -> Int -> Int -> Loc -> Maybe (Word8, Loc)
+step pxf w h (r, c, rgb, i)
+    | i == 1    = Just (compGreen rgb,  (r, c, rgb, i + 1))
+    | i == 2    = Just (compBlue  rgb,  (r, c, rgb, i + 1))
+    | i == 3    = Just (compAlpha rgb,  (r, c, rgb, i + 1))
+    | i == 0    = Just (compRed   rgb,  (r, c, rgb, i + 1))
+    | c < w -1  = Just (compRed   rgbc, (r, nextc, rgbc, 1))
+    | otherwise = Just (compRed   rgbr, (nextr, 0, rgbr, 1))
+  where 
+    nextc = c + 1
+    nextr = r + 1
+    rgbc = pxf w h r nextc
+    rgbr = pxf w h nextr 0

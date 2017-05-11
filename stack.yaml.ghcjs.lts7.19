@@ -29,8 +29,6 @@ extra-deps:
 - ref-tf-0.4.0.1
 - zenc-0.1.1
 - ghcjs-dom-jsffi-0.8.0.0
-- bytestring-strict-builder-0.4.5
-- base-prelude-1.2.0.1
 compiler-check: match-exact
 compiler: ghcjs-0.2.1.9007019_ghc-8.0.1
 resolver: lts-7.19
