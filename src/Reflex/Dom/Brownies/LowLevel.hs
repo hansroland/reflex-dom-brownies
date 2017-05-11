@@ -8,7 +8,7 @@ module Reflex.Dom.Brownies.LowLevel (
     ) where
 
 import           Reflex.Dom
-import           GHCJS.DOM.Types (unElement, toElement, HTMLCanvasElement)
+import           GHCJS.DOM.Types (unElement, toElement)
 
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Unsafe as BS (unsafeUseAsCString)
@@ -17,7 +17,7 @@ import qualified Data.ByteString.Unsafe as BS (unsafeUseAsCString)
 import GHCJS.DOM.Types (toJSString)
 import GHCJS.Types (JSVal, JSString)
 import Foreign.Ptr (Ptr)
-import GHCJS.Marshal.Pure (pFromJSVal, pToJSVal)
+import GHCJS.Marshal.Pure (pToJSVal)
 import Control.Monad.IO.Class (liftIO)
 #endif
 
