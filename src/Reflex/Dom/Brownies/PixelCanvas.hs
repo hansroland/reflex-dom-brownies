@@ -3,6 +3,7 @@
 
 module Reflex.Dom.Brownies.PixelCanvas (
     PixelRGBA8(..)
+    , ICoord
     , PixelFunction
     , pixelCanvasAttr 
     )
@@ -75,7 +76,7 @@ pixelCanvasAttr attrs evPixFun = do
 pixelByteString :: Int -> Int -> PixelFunction -> BS.ByteString
 pixelByteString width height pxf = fst $ unfoldrX (width * height) (step pxf width height) (0, 0)
 
-type Loc = (Int, Int)
+type ICoord = (Int, Int)
 
 -- | Low level function to create a ByteString.
 --   Similar to BS.unfoldrN but specialiced to PixelRGBA: 
@@ -100,7 +101,7 @@ unfoldrX ip pxf x0
 
 -- | Stepping function for unfoldrX
 -- It steps through the index space of the image and calls for every index the pixel function
-step :: PixelFunction -> Int -> Int -> Loc -> (PixelRGBA8, Loc)
+step :: PixelFunction -> Int -> Int -> ICoord -> (PixelRGBA8, ICoord)
 step pxf w h (r, c)
     | c < w -1  = (rgba, (r, c + 1))                -- step through one row
     | otherwise = (rgba, (r + 1, 0))                -- step through all rows
