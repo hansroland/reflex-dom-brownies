@@ -103,7 +103,10 @@ unfoldrX ip pxf x0
 -- It steps through the index space of the image and calls for every index the pixel function
 step :: PixelFunction -> Int -> Int -> ICoord -> (PixelRGBA8, ICoord)
 step pxf w h (r, c)
-    | c < w -1  = (rgba, (r, c + 1))                -- step through one row
-    | otherwise = (rgba, (r + 1, 0))                -- step through all rows
+    | r < h -1  = (rgba, (r + 1, c))                 
+    | otherwise = (rgba, (0, c + 1))               
+
+--    | c < w -1  = (rgba, (r, c + 1))                -- step through one row
+--    | otherwise = (rgba, (r + 1, 0))                -- step through all rows
   where 
     rgba = pxf w h r c
