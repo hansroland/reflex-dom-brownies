@@ -8,7 +8,7 @@ module Reflex.Dom.Brownies.LowLevel (
     ) where
 
 import           Reflex.Dom
-import           GHCJS.DOM.Types (unElement, toElement, toJSString, liftDOM, MonadDOM, JSVal)
+import           GHCJS.DOM.Types (unElement, toElement, toJSString, liftDOM, JSVal)
 import           Foreign.Ptr (Ptr)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Unsafe as BS (unsafeUseAsCString)
@@ -37,7 +37,7 @@ alertEvent eventValueToStr e = performEvent_ (alert <$> e)
 
 foreign import javascript unsafe
   "alert($1)"
-  js_alert :: JSString -> MonadDOM ()
+  js_alert :: JSString -> IO ()
 
 #else
 
