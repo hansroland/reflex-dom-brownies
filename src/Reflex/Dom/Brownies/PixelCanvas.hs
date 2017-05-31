@@ -11,7 +11,7 @@ where
 
 import           Control.Monad.IO.Class (liftIO)
 import           Reflex.Dom.Brownies.LowLevel (draw)
-import           GHCJS.DOM.Types (toJSVal, HTMLCanvasElement(..))
+import           GHCJS.DOM.Types (toJSVal, HTMLCanvasElement(..), MonadDOM, liftDOM)
 import           GHCJS.DOM.HTMLCanvasElement(getWidth, getHeight)
 import           Reflex.Dom
 import           Data.Word8
@@ -55,7 +55,7 @@ pixelCanvasAttr attrs evPixFun = do
     -- Creates the canvas element on which we will render
     (canvasEl, _) <- elAttr' "canvas" attrs (text "")
     -- Gets the proper GHCJS's JSVal of the canvas
-    cnvs <- liftIO $ toJSVal (_element_raw canvasEl)
+    cnvs <- liftDOM $ toJSVal (_element_raw canvasEl)
     let canvasElement = HTMLCanvasElement cnvs 
     wWidth <- getWidth canvasElement
     wHeight <- getHeight canvasElement

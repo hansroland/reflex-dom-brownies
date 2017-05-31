@@ -2,23 +2,24 @@
 
 module Reflex.Dom.Brownies.LowLevel (
     alertEvent
-    , putImageData
+    , drawImage
     , draw
 
     ) where
 
 import           Reflex.Dom
-import           GHCJS.DOM.Types (unElement, toElement)
-
+import           GHCJS.DOM.Types (unElement, toElement, toJSString, liftDOM, MonadDOM, JSVal)
+import           Foreign.Ptr (Ptr)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Unsafe as BS (unsafeUseAsCString)
 
 #ifdef __GHCJS__
-import GHCJS.DOM.Types (toJSString)
-import GHCJS.Types (JSVal, JSString)
-import Foreign.Ptr (Ptr)
+import GHCJS.Types (JSString)
+
 import GHCJS.Marshal.Pure (pToJSVal)
-import Control.Monad.IO.Class (liftIO)
+-- import Control.Monad.IO.Class (liftIO)
+#else
+import Language.Javascript.JSaddle(jsg1)
 #endif
 
 -- ----------------------------------------------------------------------------------
@@ -31,15 +32,20 @@ alertEvent :: MonadWidget t m => (a -> String) -> Event t a -> m ()
 -- Taken from the `reflex-dom-contrib` package.
 alertEvent eventValueToStr e = performEvent_ (alert <$> e)
   where
-    -- alert :: (MonadIO m) => String -> IO ()
-    alert a = liftIO $ js_alert $ toJSString $ eventValueToStr a
+    -- alert :: (MonadIO m) => String -> MonadDOM ()
+    alert a = liftDOM $ js_alert $ toJSString $ eventValueToStr a
 
 foreign import javascript unsafe
   "alert($1)"
-  js_alert :: JSString -> IO ()
+  js_alert :: JSString -> MonadDOM ()
 
 #else
-alertEvent = error "js_alert can only be used with GHCJS"
+
+alertEvent eventValueToStr e = performEvent_ (jsAlert <$> e)
+    where 
+       jsAlert a = do 
+         _ <- liftDOM $ jsg1 ("alert" :: String) $ toJSString $ eventValueToStr a
+         return  ()
 #endif
 
 -- ----------------------------------------------------------------------------------
@@ -48,13 +54,13 @@ alertEvent = error "js_alert can only be used with GHCJS"
 draw :: El t -> Int -> Int -> BS.ByteString -> IO ()
 draw canvasEl width height pixelByteString =
             BS.unsafeUseAsCString pixelByteString $ \ ptr ->
-                putImageData canvasJS width height ptr
+                drawImage canvasJS width height ptr
           where canvasJS = unElement.toElement._element_raw $ canvasEl
 
 #ifdef __GHCJS__
 
-putImageData :: forall a . JSVal -> Int -> Int -> Ptr a -> IO ()
-putImageData canvas width height pixels 
+drawImage :: forall a . JSVal -> Int -> Int -> Ptr a -> IO ()
+drawImage canvas width height pixels 
   = js_putImageData canvas (pToJSVal width) (pToJSVal height) pixels
 
 -- Code is Copyright by Victor Hernandes Silva Maia
@@ -80,5 +86,6 @@ foreign import javascript unsafe
     js_putImageData :: forall a . JSVal -> JSVal -> JSVal -> Ptr a -> IO ()
 
 #else
-putImageData = error "putImageData can only be used with GHCJS"
+drawImage :: forall a . JSVal -> Int -> Int -> Ptr a -> IO ()
+drawImage = error "drawImage can only be used with GHCJS"
 #endif
