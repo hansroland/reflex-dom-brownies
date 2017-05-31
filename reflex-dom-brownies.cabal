@@ -40,3 +40,10 @@ library
   if impl(ghcjs)
     build-depends:
       ghcjs-base
+
+  if impl(ghc)
+    build-depends:
+      jsaddle-dom
+      , jsaddle
+      , base64-bytestring
+      , lens
