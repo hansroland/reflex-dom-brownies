@@ -7,7 +7,7 @@ import Data.Monoid ((<>))
 
 main :: IO ()
 main = mainWidget $ do
-  el "h2" $ text "A n alert example"
+  el "h2" $ text "An alert example"
   evClick <- button "Click"
   el "br" blank
   alertEvent (\_ -> "Hello I'm an alert") evClick

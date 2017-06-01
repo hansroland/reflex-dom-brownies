@@ -1,8 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, NoMonomorphismRestriction, JavaScriptFFI, CPP #-}
 
 module Reflex.Dom.Brownies.LowLevel (
-    alertEvent
-    , drawImage
+    drawImage
     , draw
 
     ) where
@@ -10,42 +9,13 @@ module Reflex.Dom.Brownies.LowLevel (
 import           Reflex.Dom
 import           GHCJS.DOM.Types (unElement, toElement, toJSString, liftDOM, JSVal)
 import           Foreign.Ptr (Ptr)
+import           Language.Javascript.JSaddle(jsg1)
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Unsafe as BS (unsafeUseAsCString)
 
 #ifdef __GHCJS__
 import GHCJS.Types (JSString)
-
 import GHCJS.Marshal.Pure (pToJSVal)
--- import Control.Monad.IO.Class (liftIO)
-#else
-import Language.Javascript.JSaddle(jsg1)
-#endif
-
--- ----------------------------------------------------------------------------------
--- alert
--- ----------------------------------------------------------------------------------
-alertEvent :: MonadWidget t m => (a -> String) -> Event t a -> m ()
-
-#ifdef __GHCJS__
-
--- Taken from the `reflex-dom-contrib` package.
-alertEvent eventValueToStr e = performEvent_ (alert <$> e)
-  where
-    -- alert :: (MonadIO m) => String -> MonadDOM ()
-    alert a = liftDOM $ js_alert $ toJSString $ eventValueToStr a
-
-foreign import javascript unsafe
-  "alert($1)"
-  js_alert :: JSString -> IO ()
-
-#else
-
-alertEvent eventValueToStr e = performEvent_ (jsAlert <$> e)
-    where 
-       jsAlert a = do 
-         _ <- liftDOM $ jsg1 ("alert" :: String) $ toJSString $ eventValueToStr a
-         return  ()
 #endif
 
 -- ----------------------------------------------------------------------------------
