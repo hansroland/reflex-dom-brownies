@@ -45,5 +45,3 @@ library
     build-depends:
       jsaddle-dom
       , jsaddle
-      , base64-bytestring
-      , lens

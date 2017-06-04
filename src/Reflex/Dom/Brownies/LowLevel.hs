@@ -1,61 +1,43 @@
 {-# LANGUAGE ScopedTypeVariables, NoMonomorphismRestriction, JavaScriptFFI, CPP #-}
 
 module Reflex.Dom.Brownies.LowLevel (
-    drawImage
-    , draw
-
+    clampedArrayFromBS
     ) where
 
-import           Reflex.Dom
-import           GHCJS.DOM.Types (unElement, toElement, toJSString, liftDOM, JSVal)
-import           Foreign.Ptr (Ptr)
-import           Language.Javascript.JSaddle(jsg1)
+import           GHCJS.DOM.Types (Uint8ClampedArray(..))
 import qualified Data.ByteString as BS (ByteString)
-import qualified Data.ByteString.Unsafe as BS (unsafeUseAsCString)
 
 #ifdef __GHCJS__
-import GHCJS.Types (JSString)
-import GHCJS.Marshal.Pure (pToJSVal)
+import           GHCJS.DOM.Types (JSM, pFromJSVal, JSVal)
+import           Foreign.Ptr (Ptr)
+import qualified Data.ByteString.Unsafe as BS (unsafeUseAsCString)
+#else
+import           GHCJS.DOM.Types (JSM, liftDOM)
+import           GHCJS.Buffer (fromByteString, getArrayBuffer, thaw)
+import           Language.Javascript.JSaddle (new, jsg, pToJSVal, ghcjsPure)
 #endif
 
--- ----------------------------------------------------------------------------------
--- putImageData
--- ----------------------------------------------------------------------------------
-draw :: El t -> Int -> Int -> BS.ByteString -> IO ()
-draw canvasEl width height pixelByteString =
-            BS.unsafeUseAsCString pixelByteString $ \ ptr ->
-                drawImage canvasJS width height ptr
-          where canvasJS = unElement.toElement._element_raw $ canvasEl
-
+-- | Create a clampedArray from a ByteString
+clampedArrayFromBS :: BS.ByteString -> JSM Uint8ClampedArray
 #ifdef __GHCJS__
+clampedArrayFromBS bs =
+    BS.unsafeUseAsCString bs $ \ ptr ->
+        newUint8ClampedArray ptr
 
-drawImage :: forall a . JSVal -> Int -> Int -> Ptr a -> IO ()
-drawImage canvas width height pixels 
-  = js_putImageData canvas (pToJSVal width) (pToJSVal height) pixels
+newUint8ClampedArray :: Ptr a -> JSM Uint8ClampedArray
+newUint8ClampedArray ptr = pFromJSVal <$> jsUint8ClampedArray ptr
 
--- Code is Copyright by Victor Hernandes Silva Maia
--- Code copied from commit daac065 of of 
---   https://github.com/MaiaVictor/ReflexScreenWidget from file Screen.hs
 foreign import javascript unsafe 
     -- Arguments
-    --    canvas : JSHtmlElementCanvas
-    --    width  : JSNumber
-    --    height : JSNumber
-    --    pixels : Ptr a -- Pointer to a ByteString in the format below
-    "(function(){                                                     \
-        var cvs    = $1;                                              \
-        var width  = $2;                                              \
-        var height = $3;                                              \
-        var pixels = new Uint8ClampedArray($4.u8);                    \
-        cvs.width  = width;                                           \
-        cvs.height = height;                                          \
-        var ctx    = cvs.getContext('2d');                            \
-        ctx.putImageData(new ImageData(pixels, width, height), 0, 0); \
-    })()"
-    -- | Draw a Haskell ByteString to a JavaScript Canvas
-    js_putImageData :: forall a . JSVal -> JSVal -> JSVal -> Ptr a -> IO ()
+    --     pixels : Ptr a -- Pointer to a ByteString 
+    "(function(){ return new Uint8ClampedArray($1.u8); })()" 
+    jsUint8ClampedArray :: Ptr a -> JSM JSVal
 
 #else
-drawImage :: forall a . JSVal -> Int -> Int -> Ptr a -> IO ()
-drawImage = error "drawImage can only be used with GHCJS"
+
+clampedArrayFromBS bs = do
+  (buffer,_,_) <- ghcjsPure $ fromByteString bs -- fromString converts to 64 encoding
+  buffer' <- thaw buffer
+  arrbuff <- ghcjsPure (getArrayBuffer buffer')
+  liftDOM (Uint8ClampedArray <$> new (jsg "Uint8ClampedArray") [pToJSVal arrbuff])
 #endif

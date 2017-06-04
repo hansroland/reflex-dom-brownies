@@ -9,17 +9,19 @@ module Reflex.Dom.Brownies.PixelCanvas (
     )
 where 
 
-import           Control.Monad.IO.Class (liftIO)
-import           Reflex.Dom.Brownies.LowLevel (draw)
-import           GHCJS.DOM.Types (toJSVal, HTMLCanvasElement(..), MonadDOM, liftDOM)
-import           GHCJS.DOM.HTMLCanvasElement(getWidth, getHeight)
 import           Reflex.Dom
+import           Reflex.Dom.Brownies.LowLevel (clampedArrayFromBS)
+import           GHCJS.DOM.Types (HTMLCanvasElement(..), CanvasRenderingContext2D(..), toJSVal, liftDOM)
+import           GHCJS.DOM.HTMLCanvasElement(getWidth, getHeight, getContext)
+import           GHCJS.DOM.ImageData (newImageData)
+import           GHCJS.DOM.CanvasRenderingContext2D (putImageData)
+import           Language.Javascript.JSaddle(Object, JSM) 
 import           Data.Word8
 import qualified Data.ByteString as BS (ByteString, empty)
 import qualified Data.ByteString.Internal as BSI
 import qualified Data.Map as M (Map)
 import qualified Data.Text as T
-
+import           Data.Maybe(fromJust)
 import           Foreign.Ptr (plusPtr)
 import           System.IO.Unsafe (unsafePerformIO)
 import           Foreign.Storable (poke, pokeByteOff)
@@ -29,7 +31,6 @@ import           Foreign.Storable (poke, pokeByteOff)
 -- --------------------------------------------------------------------------
 --
 -- Inspired by the library https://github.com/MaiaVictor/ReflexScreenWidget
---          (Code to write to canvas originates from MaiaVictor!)
 --
 -- Main difference: The library of MaiaVictor always recreates the image.
 --                  This library recreates the image only if an Event occurs.
@@ -61,7 +62,7 @@ pixelCanvasAttr attrs evPixFun = do
     wHeight <- getHeight canvasElement
     let width = fromIntegral wWidth
     let height = fromIntegral wHeight
-    let evBS = pixelByteString width height <$> evPixFun
+    let evBS = createPixelBS width height <$> evPixFun
     -- IO action that will draw our pixels to the canvas 
     -- Each byte of the buffer represents a color channel from 0~255, in the following format:
     -- [0xRR,0xGG,0xBB,0xAA, 0xRR,0xGG,0xBB,0xAA...]. The length of the ByteString
@@ -69,12 +70,12 @@ pixelCanvasAttr attrs evPixFun = do
     -- ByteString to a C Ptr that will be used directly on the JS putImageData function.
 
     -- Draw the canvas, when an draw event occurs
-    performEvent_ $ liftIO . draw canvasEl width height <$> evBS
+    performEvent_ $ liftDOM . putByteString canvasElement width height <$> evBS
     return canvasEl
 
 -- | Generate RGBA-ByteString for our image
-pixelByteString :: Int -> Int -> PixelFunction -> BS.ByteString
-pixelByteString width height pxf = fst $ unfoldrX (width * height) (step pxf width height) (0, 0)
+createPixelBS :: Int -> Int -> PixelFunction -> BS.ByteString
+createPixelBS width height pxf = fst $ unfoldrX (width * height) (step pxf width height) (0, 0)
 
 type ICoord = (Int, Int)
 
@@ -110,3 +111,14 @@ step pxf w h (r, c)
 --    | otherwise = (rgba, (r + 1, 0))                -- step through all rows
   where 
     rgba = pxf w h r c
+
+-- | Put the bytestring with the pixels to the image
+putByteString :: HTMLCanvasElement -> Int -> Int -> BS.ByteString -> JSM ()
+putByteString htmlCanvas width height pixels = do
+    ctx <-  getContext htmlCanvas ("2d" :: String) ([] :: [Object])
+    jsvalCtx <- toJSVal $ fromJust ctx
+    let ctx2d = CanvasRenderingContext2D jsvalCtx
+    clampedArray <- clampedArrayFromBS pixels
+    imageData <- newImageData clampedArray (fromIntegral width) (Just $ fromIntegral height)
+    _ <- putImageData ctx2d imageData 0 0
+    return ()
