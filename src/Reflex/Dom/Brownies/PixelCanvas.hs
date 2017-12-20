@@ -10,21 +10,21 @@ module Reflex.Dom.Brownies.PixelCanvas (
 where 
 
 import           Reflex.Dom
-import           Reflex.Dom.Brownies.LowLevel (clampedArrayFromBS)
+import           Reflex.Dom.Brownies.LowLevel (clampedArrayFromPixels)
 import           GHCJS.DOM.Types (HTMLCanvasElement(..), CanvasRenderingContext2D(..), toJSVal, liftDOM)
 import           GHCJS.DOM.HTMLCanvasElement(getWidth, getHeight, getContext)
 import           GHCJS.DOM.ImageData (newImageData)
 import           GHCJS.DOM.CanvasRenderingContext2D (putImageData)
 import           Language.Javascript.JSaddle(Object, JSM) 
-import           Data.Word8
-import qualified Data.ByteString as BS (ByteString, empty)
-import qualified Data.ByteString.Internal as BSI
+
+
 import qualified Data.Map as M (Map)
 import qualified Data.Text as T
 import           Data.Maybe(fromJust)
-import           Foreign.Ptr (plusPtr)
-import           System.IO.Unsafe (unsafePerformIO)
-import           Foreign.Storable (poke, pokeByteOff)
+
+import           Data.Word
+import           Data.Bits(shiftL)
+import qualified Data.Vector as V
 
 -- --------------------------------------------------------------------------
 -- Canvas 
@@ -58,11 +58,16 @@ pixelCanvasAttr attrs evPixFun = do
     -- Gets the proper GHCJS's JSVal of the canvas
     cnvs <- liftDOM $ toJSVal (_element_raw canvasEl)
     let canvasElement = HTMLCanvasElement cnvs 
-    wWidth <- getWidth canvasElement
-    wHeight <- getHeight canvasElement
-    let width = fromIntegral wWidth
-    let height = fromIntegral wHeight
-    let evBS = createPixelBS width height <$> evPixFun
+    width <- fromIntegral <$> getWidth canvasElement
+    height <- fromIntegral <$> getHeight canvasElement
+
+    -- use ByteString
+    -- let evBS = createPixelBS width height <$> evPixFun
+
+    -- use Pixels Words
+    let evBS = createPixels width height <$> evPixFun
+
+
     -- IO action that will draw our pixels to the canvas 
     -- Each byte of the buffer represents a color channel from 0~255, in the following format:
     -- [0xRR,0xGG,0xBB,0xAA, 0xRR,0xGG,0xBB,0xAA...]. The length of the ByteString
@@ -70,55 +75,42 @@ pixelCanvasAttr attrs evPixFun = do
     -- ByteString to a C Ptr that will be used directly on the JS putImageData function.
 
     -- Draw the canvas, when an draw event occurs
-    performEvent_ $ liftDOM . putByteString canvasElement width height <$> evBS
-    return canvasEl
+    -- performEvent_ $ liftDOM . putByteString canvasElement width height <$> evBS
 
--- | Generate RGBA-ByteString for our image
-createPixelBS :: Int -> Int -> PixelFunction -> BS.ByteString
-createPixelBS width height pxf = fst $ unfoldrX (width * height) (step pxf width height) (0, 0)
+    performEvent_ $ liftDOM . writePixelsToCanvas canvasElement width height <$> evBS
+
+    return canvasEl
 
 type ICoord = (Int, Int)
 
--- | Low level function to create a ByteString.
---   Similar to BS.unfoldrN but specialiced to PixelRGBA: 
---   For every Pixel we store 4 bytes to the ByteString
-unfoldrX :: Int ->                           -- ^ Number of Pixels
-         (a -> (PixelRGBA8, a))              -- ^ Stepping function
-         -> a                                -- ^ Start argument for stepping function
-         -> (BS.ByteString, a)
-unfoldrX ip pxf x0
-    | nb < 0    = (BS.empty, x0)             -- nb = number of bytes; np = number of pixels
-    | otherwise = unsafePerformIO $ BSI.createAndTrim' nb $ \p -> go p x0 0
-  where 
-    nb = 4 * ip
-    go !p !x !n
-        | n == nb    = return (0, n, x)
-        | otherwise = do poke p rr
-                         pokeByteOff p 1 gg
-                         pokeByteOff p 2 bb
-                         pokeByteOff p 3 aa
-                         go (p `plusPtr` 4) x' (n+4)
-      where (PixelRGBA8 rr gg bb aa, x') = pxf x
+-- | Create Pixels
+createPixels :: Int -> Int -> PixelFunction ->  V.Vector Word32
+createPixels w h pxf = 
+    V.unfoldrN (w * h) (step w h pxf) (0,0)
 
--- | Stepping function for unfoldrX
--- It steps through the index space of the image and calls for every index the pixel function
-step :: PixelFunction -> Int -> Int -> ICoord -> (PixelRGBA8, ICoord)
-step pxf w h (r, c)
-    | r < h -1  = (rgba, (r + 1, c))                 
-    | otherwise = (rgba, (0, c + 1))               
 
---    | c < w -1  = (rgba, (r, c + 1))                -- step through one row
---    | otherwise = (rgba, (r + 1, 0))                -- step through all rows
-  where 
-    rgba = pxf w h r c
+step :: Int -> Int -> PixelFunction -> ICoord -> Maybe (Word32, ICoord) 
+step w h pxf (r,c) 
+    | r == h    = Nothing  
+    | c < w -1  = Just (rgba, (r, c  + 1))     
+    | otherwise = Just (rgba, (r + 1, 0)) 
+ where 
+    rgba = buildWord $ pxf w h r c
 
--- | Put the bytestring with the pixels to the image
-putByteString :: HTMLCanvasElement -> Int -> Int -> BS.ByteString -> JSM ()
-putByteString htmlCanvas width height pixels = do
+-- Create a word from a Pixel 
+buildWord :: PixelRGBA8 -> Word32 
+buildWord (PixelRGBA8 rr gg bb aa) =  fromIntegral rr 
+    + (shiftL (fromIntegral gg) 8)
+    + (shiftL (fromIntegral bb) 16)
+    + (shiftL (fromIntegral aa) 24)
+
+-- | Write the pixels to the canvas (Replacement for putByteString)
+writePixelsToCanvas :: HTMLCanvasElement -> Int -> Int -> V.Vector Word32 -> JSM ()
+writePixelsToCanvas htmlCanvas width height pixels = do
     ctx <-  getContext htmlCanvas ("2d" :: String) ([] :: [Object])
     jsvalCtx <- toJSVal $ fromJust ctx
     let ctx2d = CanvasRenderingContext2D jsvalCtx
-    clampedArray <- clampedArrayFromBS pixels
+    clampedArray <- clampedArrayFromPixels pixels
     imageData <- newImageData clampedArray (fromIntegral width) (Just $ fromIntegral height)
     _ <- putImageData ctx2d imageData 0 0
     return ()

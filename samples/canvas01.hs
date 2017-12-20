@@ -2,8 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import Reflex.Dom.Brownies
-import GHCJS.DOM.EventM (mouseOffsetXY)
-import qualified Data.Text as T
+-- import GHCJS.DOM.EventM (mouseOffsetXY)
+import qualified Data.Text as T ()
 import Data.Monoid ((<>))
 
 main :: IO ()
@@ -14,8 +14,9 @@ main = mainWidget $ do
   evGreen <- button "Green"
   el "br" blank
   let evImg = leftmost [greenPixels <$ evPostBuild, redPixels <$ evRed, greenPixels <$ evGreen]
+  -- let attr = "width" =: "1024" <> "height" =: "1024"
   let attr = "width" =: "256" <> "height" =: "256"
-  canvas <- pixelCanvasAttr attr evImg
+  _ <- pixelCanvasAttr attr evImg
   return ()
   
   {-
